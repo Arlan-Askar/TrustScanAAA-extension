@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Screenshot 1 — Inline Badges</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    background: #09090b;
+    color: #e4e4e7;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.65;
+  }
+
+  /* ── Fake browser chrome ── */
+  .browser-chrome {
+    height: 52px;
+    background: #1c1c1e;
+    border-bottom: 1px solid #2a2a2e;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+  }
+  .browser-dots { display: flex; gap: 7px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .browser-bar {
+    flex: 1;
+    height: 28px;
+    background: #2a2a2e;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    color: #9aa3ad;
+    font-size: 13px;
+  }
+  .browser-bar-lock { color: #4ade80; font-size: 12px; }
+  .ext-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #6c7bff, #a78bfa);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  /* ── Page layout ── */
+  .page {
+    height: 748px;
+    display: flex;
+  }
+
+  /* ── Left sidebar ── */
+  .sidebar {
+    width: 220px;
+    background: #111113;
+    border-right: 1px solid #1f1f23;
+    padding: 20px 16px;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f4f4f5;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-logo-icon {
+    width: 26px; height: 26px;
+    background: linear-gradient(135deg, #6c7bff, #a78bfa);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #71717a;
+    cursor: pointer;
+  }
+  .nav-item.active {
+    background: #1f1f2e;
+    color: #a78bfa;
+  }
+  .nav-section {
+    font-size: 11px;
+    color: #52525b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 16px 0 6px 12px;
+  }
+
+  /* ── Main content ── */
+  .main {
+    flex: 1;
+    padding: 32px 48px;
+    overflow: hidden;
+  }
+  .breadcrumb {
+    font-size: 12px;
+    color: #52525b;
+    margin-bottom: 20px;
+  }
+  .breadcrumb span { color: #71717a; }
+  .article-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f4f4f5;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .article-meta {
+    font-size: 12px;
+    color: #52525b;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .article-meta .tag {
+    background: #1f1f2e;
+    color: #a78bfa;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+  }
+  .divider {
+    border: none;
+    border-top: 1px solid #1f1f23;
+    margin: 20px 0;
+  }
+  p { color: #a1a1aa; margin-bottom: 14px; font-size: 14px; }
+  p strong { color: #e4e4e7; }
+
+  /* ── TrustScan badges ── */
+  .ts-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    cursor: pointer;
+    vertical-align: middle;
+    white-space: nowrap;
+    position: relative;
+    border: 1px solid transparent;
+    text-decoration: none;
+  }
+  .ts-safe {
+    background: rgba(16,185,129,0.15);
+    border-color: rgba(16,185,129,0.35);
+    color: #10B981;
+  }
+  .ts-caution {
+    background: rgba(245,158,11,0.15);
+    border-color: rgba(245,158,11,0.35);
+    color: #F59E0B;
+  }
+  .ts-danger {
+    background: rgba(239,68,68,0.15);
+    border-color: rgba(239,68,68,0.35);
+    color: #EF4444;
+  }
+
+  /* ── Tooltip ── */
+  .ts-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #131316;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 180px;
+    font-size: 12px;
+    color: #f4f4f5;
+    line-height: 1.6;
+    z-index: 99999;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .ts-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(255,255,255,0.1);
+  }
+
+  .addr {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: #6c7bff;
+    background: rgba(108,123,255,0.08);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  /* ── Right panel ── */
+  .right-panel {
+    width: 260px;
+    border-left: 1px solid #1f1f23;
+    padding: 24px 18px;
+    flex-shrink: 0;
+    background: #0d0d0f;
+  }
+  .panel-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #52525b;
+    margin-bottom: 14px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid #1a1a1e;
+    font-size: 13px;
+  }
+  .stat-label { color: #71717a; }
+  .stat-value { color: #f4f4f5; font-weight: 500; }
+  .stat-value.green { color: #10B981; }
+  .stat-value.red { color: #EF4444; }
+  .stat-value.yellow { color: #F59E0B; }
+
+  .scan-banner {
+    margin-top: 20px;
+    background: linear-gradient(135deg, rgba(108,123,255,0.12), rgba(167,139,250,0.08));
+    border: 1px solid rgba(108,123,255,0.25);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 12px;
+    color: #a1a1aa;
+    text-align: center;
+  }
+  .scan-banner strong { color: #a78bfa; display: block; font-size: 13px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- Fake browser chrome -->
+<div class="browser-chrome">
+  <div class="browser-dots">
+    <div class="dot dot-r"></div>
+    <div class="dot dot-y"></div>
+    <div class="dot dot-g"></div>
+  </div>
+  <div class="browser-bar">
+    <span class="browser-bar-lock">🔒</span>
+    <span>dexscreener.com/ethereum/pairs</span>
+  </div>
+  <div class="ext-icon">🛡</div>
+</div>
+
+<!-- Page content -->
+<div class="page">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🛡</div>
+      DexScreener
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">Markets</div>
+      <div class="nav-item active">Trending</div>
+      <div class="nav-item">New Pairs</div>
+      <div class="nav-item">Gainers</div>
+      <div class="nav-section">Networks</div>
+      <div class="nav-item">Ethereum</div>
+      <div class="nav-item">Solana</div>
+      <div class="nav-item">BSC</div>
+      <div class="nav-item">Base</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="breadcrumb">Trending › <span>Ethereum Pairs</span></div>
+    <div class="article-title">Today's Top Movers — Ethereum</div>
+    <div class="article-meta">
+      <span class="tag">LIVE</span>
+      <span>Updated 14 seconds ago</span>
+      <span>·</span>
+      <span>437 pairs tracked</span>
+    </div>
+    <hr class="divider">
+
+    <p>
+      The <strong>PEPE</strong> token contract
+      <span class="addr">0x6982508145454ce325ddbe47a25d4ec3d2311933</span>
+      <span class="ts-badge ts-safe">🛡 <span>✓ 81</span></span>
+      has seen a 340% volume surge in the past 24 hours, with liquidity locked and ownership renounced.
+    </p>
+
+    <p>
+      Meanwhile, <strong>WOJAK</strong> at
+      <span class="addr">0x5026f006b85729a8b14553fae6af249ad16c9aa</span>
+      <span class="ts-badge ts-caution" style="position:relative;">
+        🛡 <span>⚠ 58</span>
+        <span class="ts-tooltip">
+          <strong style="color:#fff">🛡 TrustScan</strong><br>
+          WOJAK · ETHEREUM<br>
+          Score: <strong>58/100</strong><br>
+          <span style="color:#666;font-size:10px">Click to view full analysis</span>
+        </span>
+      </span>
+      shows moderate risk — active owner wallet with mint authority retained.
+    </p>
+
+    <p>
+      Exercise caution with
+      <span class="addr">0xd8da6bf26964af9d7eed9e03e53415d37aa96045</span>
+      <span class="ts-badge ts-danger">🛡 <span>✕ 12</span></span>
+      — honeypot pattern detected, trading disabled on sell, liquidity is unverifiable.
+    </p>
+
+    <p>
+      On Solana, <strong>BONK</strong>
+      <span class="addr" style="font-size:12px">DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263</span>
+      <span class="ts-badge ts-safe">🛡 <span>✓ 77</span></span>
+      remains a community favourite with strong on-chain metrics and broad holder distribution.
+    </p>
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+    <div class="panel-title">Token Stats</div>
+    <div class="stat-row"><span class="stat-label">Price</span><span class="stat-value">$0.00000142</span></div>
+    <div class="stat-row"><span class="stat-label">24h Change</span><span class="stat-value green">+340%</span></div>
+    <div class="stat-row"><span class="stat-label">Liquidity</span><span class="stat-value">$2.4M</span></div>
+    <div class="stat-row"><span class="stat-label">Market Cap</span><span class="stat-value">$58.3M</span></div>
+    <div class="stat-row"><span class="stat-label">Holders</span><span class="stat-value">41,220</span></div>
+    <div class="stat-row"><span class="stat-label">Owner</span><span class="stat-value green">Renounced</span></div>
+    <div class="stat-row"><span class="stat-label">Honeypot</span><span class="stat-value green">Clean</span></div>
+
+    <div class="scan-banner">
+      <strong>🛡 TrustScan Active</strong>
+      Scanning addresses on this page automatically
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

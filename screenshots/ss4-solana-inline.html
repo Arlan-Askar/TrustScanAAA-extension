@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SS4 — Solana + Multi-chain inline</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  width: 1280px; height: 800px; overflow: hidden;
+  background: #09090b; color: #e4e4e7; line-height: 1.65;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px;
+}
+.bc {
+  height: 46px; background: #1c1c1e; border-bottom: 1px solid #2a2a2e;
+  display: flex; align-items: center; padding: 0 16px; gap: 10px;
+}
+.dots { display: flex; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dr{background:#ff5f57;}.dy{background:#febc2e;}.dg{background:#28c840;}
+.urlbar {
+  flex: 1; height: 26px; background: #2a2a2e; border-radius: 6px;
+  display: flex; align-items: center; padding: 0 10px; gap: 6px;
+  color: #9aa3ad; font-size: 12px;
+}
+.lock { color: #4ade80; }
+.ext-icon {
+  width: 26px; height: 26px; background: linear-gradient(135deg,#6366F1,#a78bfa);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px;
+}
+/* Page */
+.page { display: flex; height: 754px; }
+.sidebar {
+  width: 210px; background: #0d0d10; border-right: 1px solid #1a1a1e;
+  padding: 18px 14px; flex-shrink: 0;
+}
+.sb-logo { font-size: 13px; font-weight: 700; color: #f4f4f5; display: flex; align-items: center; gap: 7px; margin-bottom: 20px; }
+.sb-nav-item { padding: 7px 10px; border-radius: 6px; font-size: 12px; color: #52525b; margin-bottom: 2px; }
+.sb-nav-item.active { background: #18181b; color: #e4e4e7; }
+.sb-section { font-size: 10px; color: #3f3f46; text-transform: uppercase; letter-spacing: .07em; margin: 12px 0 5px 10px; }
+
+.main { flex: 1; padding: 28px 36px; overflow: hidden; }
+.ptitle { font-size: 17px; font-weight: 700; color: #f4f4f5; margin-bottom: 4px; letter-spacing: -.02em; }
+.psub { font-size: 12px; color: #52525b; margin-bottom: 18px; }
+
+/* Article */
+.article { background: #0f0f12; border: 1px solid #1a1a1e; border-radius: 12px; padding: 22px 24px; }
+.art-title { font-size: 15px; font-weight: 700; color: #f4f4f5; margin-bottom: 14px; }
+p { font-size: 13px; color: #9aa3ad; margin-bottom: 12px; line-height: 1.7; }
+p strong { color: #e4e4e7; }
+.mono { font-family: 'SF Mono',monospace; font-size: 12px; color: #818cf8; background: rgba(99,102,241,.08); padding: 1px 5px; border-radius: 4px; }
+
+/* Badges — exact from content.js */
+.ts-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 5px; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  vertical-align: middle; white-space: nowrap; border: 1px solid transparent; position: relative;
+}
+.ts-safe    { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.35); color:#10B981; }
+.ts-caution { background:rgba(245,158,11,.15);  border-color:rgba(245,158,11,.35);  color:#F59E0B; }
+.ts-danger  { background:rgba(239,68,68,.15);   border-color:rgba(239,68,68,.35);   color:#EF4444; }
+
+.ts-tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #131316; border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+  padding: 10px 14px; min-width: 185px; font-size: 12px; color: #f4f4f5;
+  line-height: 1.6; z-index: 99999; box-shadow: 0 12px 32px rgba(0,0,0,.7);
+  white-space: nowrap; pointer-events: none;
+}
+.ts-tooltip::after {
+  content:''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: rgba(255,255,255,.1);
+}
+
+/* Right panel */
+.rpanel {
+  width: 250px; border-left: 1px solid #1a1a1e; padding: 22px 16px;
+  background: #0b0b0e; flex-shrink: 0;
+}
+.rp-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #52525b; margin-bottom: 12px; }
+.chain-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 0; border-bottom: 1px solid #141417;
+}
+.chain-name { font-size: 12px; color: #e4e4e7; display: flex; align-items: center; gap: 7px; }
+.chain-dot { width: 7px; height: 7px; border-radius: 50%; }
+.chain-score { font-size: 12px; font-weight: 700; }
+.rp-note {
+  margin-top: 14px; font-size: 11px; color: #52525b; line-height: 1.5;
+  border-top: 1px solid #141417; padding-top: 12px;
+}
+</style>
+</head>
+<body>
+
+<div class="bc">
+  <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+  <div class="urlbar"><span class="lock">🔒</span> reddit.com/r/CryptoCurrency/comments/defi-research</div>
+  <div class="ext-icon">🛡</div>
+</div>
+
+<div class="page">
+  <div class="sidebar">
+    <div class="sb-logo">🟠 Reddit</div>
+    <div class="sb-section">Community</div>
+    <div class="sb-nav-item active">r/CryptoCurrency</div>
+    <div class="sb-nav-item">r/defi</div>
+    <div class="sb-nav-item">r/solana</div>
+    <div class="sb-nav-item">r/ethereum</div>
+    <div class="sb-section">Sort</div>
+    <div class="sb-nav-item">Hot</div>
+    <div class="sb-nav-item">New</div>
+    <div class="sb-nav-item">Top</div>
+  </div>
+
+  <div class="main">
+    <div class="ptitle">r/CryptoCurrency</div>
+    <div class="psub">TrustScan is scanning addresses on this page · 4 found</div>
+
+    <div class="article">
+      <div class="art-title">📋 Weekly Token Research — June 2026</div>
+
+      <p>
+        Stablecoin <strong>USDC</strong>
+        <span class="mono">0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48</span>
+        <span class="ts-badge ts-safe">🛡 ✓ 81</span>
+        remains the go-to on-chain dollar. Ownership renounced, contract verified, $2.1B liquidity.
+        Use freely for DeFi interactions.
+      </p>
+
+      <p>
+        <strong>BONK</strong> on Solana —
+        <span class="mono" style="font-size:11px">DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263</span>
+        <span class="ts-badge ts-safe" style="position:relative;">
+          🛡 ✓ 76
+          <span class="ts-tooltip">
+            <strong style="color:#fff">🛡 TrustScan</strong><br>
+            BONK · SOLANA<br>
+            Score: <strong style="color:#10B981">76 / 100</strong><br>
+            <span style="color:#10B981">✓ Broad holder distribution<br>
+            ✓ Liquidity $42.1M</span><br>
+            <span style="color:#666;font-size:10px">Click to view full analysis</span>
+          </span>
+        </span>
+        — strong community, wide distribution. Solana meme with real volume.
+      </p>
+
+      <p>
+        Watch out for <strong>WOJAK</strong>
+        <span class="mono">0x5026f006b85729a8b14553fae6af249ad16c9aA</span>
+        <span class="ts-badge ts-caution">🛡 ⚠ 54</span>
+        — active owner wallet, mint authority retained. Mid-risk, proceed with caution.
+      </p>
+
+      <p>
+        <strong style="color:#EF4444">DO NOT BUY</strong> — SAFEMOON2
+        <span class="mono">0xb8c77482e45f1f44de1745f52c74426c631bdd52</span>
+        <span class="ts-badge ts-danger">🛡 ✕ 8</span>
+        has been flagged as a <strong>honeypot</strong>. Buys work, sells do not. Classic rug setup.
+      </p>
+    </div>
+  </div>
+
+  <div class="rpanel">
+    <div class="rp-title">🛡 Page Summary</div>
+    <div class="chain-row">
+      <span class="chain-name"><span class="chain-dot" style="background:#10B981"></span>USDC</span>
+      <span class="chain-score" style="color:#10B981">81</span>
+    </div>
+    <div class="chain-row">
+      <span class="chain-name"><span class="chain-dot" style="background:#10B981"></span>BONK</span>
+      <span class="chain-score" style="color:#10B981">76</span>
+    </div>
+    <div class="chain-row">
+      <span class="chain-name"><span class="chain-dot" style="background:#F59E0B"></span>WOJAK</span>
+      <span class="chain-score" style="color:#F59E0B">54</span>
+    </div>
+    <div class="chain-row">
+      <span class="chain-name"><span class="chain-dot" style="background:#EF4444"></span>SAFEMOON2</span>
+      <span class="chain-score" style="color:#EF4444">8</span>
+    </div>
+    <div class="rp-note">
+      TrustScan scanned 4 addresses on this page automatically.<br><br>
+      Supports Ethereum, Solana, BSC, Polygon, Base, Arbitrum + 8 more networks.
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Screenshot 2 — Popup UI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    background: #09090b;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  /* ── Fake browser chrome ── */
+  .browser-chrome {
+    height: 52px;
+    background: #1c1c1e;
+    border-bottom: 1px solid #2a2a2e;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    position: relative;
+  }
+  .browser-dots { display: flex; gap: 7px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .browser-bar {
+    flex: 1;
+    height: 28px;
+    background: #2a2a2e;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 8px;
+    color: #9aa3ad;
+    font-size: 13px;
+  }
+  .browser-bar-lock { color: #4ade80; font-size: 12px; }
+  .ext-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+  }
+  .ext-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, #6c7bff, #a78bfa);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    outline: 2px solid rgba(108,123,255,0.5);
+    outline-offset: 2px;
+  }
+
+  /* ── Background page (blurred) ── */
+  .bg-page {
+    position: absolute;
+    inset: 52px 0 0 0;
+    background: #09090b;
+    filter: blur(1px);
+    opacity: 0.4;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(255,255,255,0.015) 29px),
+      repeating-linear-gradient(90deg, transparent, transparent 140px, rgba(255,255,255,0.015) 141px);
+  }
+
+  /* ── Popup container ── */
+  .popup-wrapper {
+    position: absolute;
+    top: 58px;
+    right: 12px;
+    filter: drop-shadow(0 20px 60px rgba(0,0,0,0.8));
+  }
+
+  /* ── Popup arrow ── */
+  .popup-arrow {
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #1a1a1f;
+    margin-left: auto;
+    margin-right: 6px;
+  }
+
+  /* ── Popup UI ── */
+  .popup {
+    width: 320px;
+    background: #09090b;
+    color: #f4f4f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    border-radius: 14px;
+    border: 1px solid #27272a;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid #18181b;
+    background: #0d0d10;
+  }
+  .popup-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 700; color: #f4f4f5;
+  }
+  .popup-logo-icon {
+    width: 24px; height: 24px;
+    background: linear-gradient(135deg, #6c7bff, #a78bfa);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .popup-header-right { display: flex; align-items: center; gap: 8px; }
+  .clear-btn {
+    font-size: 11px; color: #52525b;
+    background: none; border: none; cursor: pointer;
+    padding: 3px 7px;
+    border-radius: 4px;
+  }
+
+  /* Input */
+  .input-wrap {
+    padding: 12px 14px;
+    border-bottom: 1px solid #18181b;
+    display: flex;
+    gap: 8px;
+  }
+  .addr-input {
+    flex: 1;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #a1a1aa;
+    font-family: 'SF Mono', monospace;
+    outline: none;
+  }
+  .scan-btn {
+    background: linear-gradient(135deg, #6c7bff, #a78bfa);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Result card */
+  .result-card {
+    padding: 16px 16px 14px;
+    border-bottom: 1px solid #18181b;
+  }
+
+  .result-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+  .result-info {}
+  .result-symbol {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f4f4f5;
+    letter-spacing: -0.02em;
+  }
+  .result-addr {
+    font-size: 11px;
+    color: #52525b;
+    font-family: 'SF Mono', monospace;
+    margin-top: 2px;
+  }
+  .result-network {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+    font-size: 11px;
+    color: #71717a;
+    background: #18181b;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  /* Score circle */
+  .score-circle {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: conic-gradient(#10B981 0% 81%, #1a2a1a 81% 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .score-circle-inner {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #0d1a12;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .score-number { font-size: 20px; font-weight: 800; color: #10B981; line-height: 1; }
+  .score-label { font-size: 8px; color: #10B981; font-weight: 600; letter-spacing: 0.05em; margin-top: 1px; }
+
+  /* Verdict */
+  .verdict-banner {
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.25);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .verdict-icon { font-size: 16px; }
+  .verdict-text { font-size: 13px; font-weight: 700; color: #10B981; }
+  .verdict-sub { font-size: 11px; color: #52525b; margin-left: auto; }
+
+  /* Checklist */
+  .checklist { display: flex; flex-direction: column; gap: 5px; }
+  .check-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: #71717a;
+  }
+  .check-item .icon { font-size: 11px; width: 16px; text-align: center; }
+  .check-ok { color: #10B981; }
+  .check-warn { color: #F59E0B; }
+
+  /* Open button */
+  .open-btn {
+    display: block;
+    width: calc(100% - 28px);
+    margin: 12px 14px 0;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 8px;
+    padding: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #a78bfa;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  /* Recent scans */
+  .recent-section {
+    padding: 12px 16px 8px;
+  }
+  .recent-title {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: #52525b;
+    margin-bottom: 8px;
+  }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 0;
+    border-bottom: 1px solid #18181b;
+    cursor: pointer;
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-left { display: flex; align-items: center; gap: 8px; }
+  .recent-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .recent-addr { font-size: 11px; color: #71717a; font-family: 'SF Mono', monospace; }
+  .recent-sym { font-size: 11px; color: #f4f4f5; font-weight: 600; }
+  .recent-score { font-size: 11px; font-weight: 700; }
+
+  /* Highlight annotation */
+  .annotation {
+    position: absolute;
+    background: rgba(108,123,255,0.9);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .annotation::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    border: 5px solid transparent;
+    border-top-color: rgba(108,123,255,0.9);
+  }
+</style>
+</head>
+<body>
+
+<!-- Fake browser chrome -->
+<div class="browser-chrome">
+  <div class="browser-dots">
+    <div class="dot dot-r"></div>
+    <div class="dot dot-y"></div>
+    <div class="dot dot-g"></div>
+  </div>
+  <div class="browser-bar">
+    <span class="browser-bar-lock">🔒</span>
+    <span>etherscan.io/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48</span>
+  </div>
+  <div class="ext-area">
+    <div class="ext-icon">🛡</div>
+  </div>
+</div>
+
+<!-- Blurred bg -->
+<div class="bg-page"></div>
+
+<!-- Popup -->
+<div class="popup-wrapper">
+  <div class="popup-arrow"></div>
+  <div class="popup">
+
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="popup-logo">
+        <div class="popup-logo-icon">🛡</div>
+        TrustScan
+      </div>
+      <div class="popup-header-right">
+        <button class="clear-btn">Clear history</button>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-wrap">
+      <input class="addr-input" value="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" readonly>
+      <button class="scan-btn">Scan</button>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card">
+      <div class="result-top">
+        <div class="result-info">
+          <div class="result-symbol">USDC</div>
+          <div class="result-addr">0xa0b869…06eb48</div>
+          <div class="result-network">⬡ Ethereum</div>
+        </div>
+        <div class="score-circle">
+          <div class="score-circle-inner">
+            <div class="score-number">81</div>
+            <div class="score-label">SAFE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="verdict-banner">
+        <span class="verdict-icon">✅</span>
+        <span class="verdict-text">SAFE</span>
+        <span class="verdict-sub">Low Risk</span>
+      </div>
+
+      <div class="checklist">
+        <div class="check-item"><span class="icon check-ok">✓</span> Contract verified on Etherscan</div>
+        <div class="check-item"><span class="icon check-ok">✓</span> Ownership renounced</div>
+        <div class="check-item"><span class="icon check-ok">✓</span> No honeypot detected</div>
+        <div class="check-item"><span class="icon check-ok">✓</span> Liquidity locked · $2.1B</div>
+        <div class="check-item"><span class="icon check-warn">⚠</span> Mint function present (stablecoin)</div>
+      </div>
+    </div>
+
+    <button class="open-btn">↗ View full analysis on TrustScan</button>
+
+    <!-- Recent scans -->
+    <div class="recent-section">
+      <div class="recent-title">Recent scans</div>
+
+      <div class="recent-item">
+        <div class="recent-left">
+          <div class="recent-dot" style="background:#10B981"></div>
+          <div>
+            <div class="recent-sym">USDC</div>
+            <div class="recent-addr">0xa0b869…06eb48</div>
+          </div>
+        </div>
+        <span class="recent-score" style="color:#10B981">81</span>
+      </div>
+
+      <div class="recent-item">
+        <div class="recent-left">
+          <div class="recent-dot" style="background:#10B981"></div>
+          <div>
+            <div class="recent-sym">PEPE</div>
+            <div class="recent-addr">0x698250…11933</div>
+          </div>
+        </div>
+        <span class="recent-score" style="color:#10B981">77</span>
+      </div>
+
+      <div class="recent-item">
+        <div class="recent-left">
+          <div class="recent-dot" style="background:#F59E0B"></div>
+          <div>
+            <div class="recent-sym">WOJAK</div>
+            <div class="recent-addr">0x5026f0…c9aa</div>
+          </div>
+        </div>
+        <span class="recent-score" style="color:#F59E0B">58</span>
+      </div>
+
+      <div class="recent-item">
+        <div class="recent-left">
+          <div class="recent-dot" style="background:#EF4444"></div>
+          <div>
+            <div class="recent-sym">Unknown</div>
+            <div class="recent-addr">0xd8da6b…96045</div>
+          </div>
+        </div>
+        <span class="recent-score" style="color:#EF4444">12</span>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SS1 — Scam Caught</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  width: 1280px; height: 800px; overflow: hidden;
+  background: #09090b;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px; color: #e4e4e7; line-height: 1.6;
+}
+/* ── Browser chrome ── */
+.bc {
+  height: 46px; background: #1c1c1e; border-bottom: 1px solid #2a2a2e;
+  display: flex; align-items: center; padding: 0 16px; gap: 10px;
+}
+.dots { display: flex; gap: 6px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dr { background:#ff5f57; } .dy { background:#febc2e; } .dg { background:#28c840; }
+.urlbar {
+  flex: 1; height: 26px; background: #2a2a2e; border-radius: 6px;
+  display: flex; align-items: center; padding: 0 10px; gap: 6px;
+  color: #9aa3ad; font-size: 12px;
+}
+.lock { color: #4ade80; font-size: 11px; }
+.ext-icon {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg,#6366F1,#a78bfa);
+  border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; flex-shrink: 0;
+}
+
+/* ── Page layout ── */
+.page { display: flex; height: 754px; }
+
+/* ── Left nav ── */
+.nav {
+  width: 200px; background: #0d0d10; border-right: 1px solid #1a1a1e;
+  padding: 20px 14px; flex-shrink: 0;
+}
+.nav-logo {
+  font-size: 13px; font-weight: 700; color: #f4f4f5;
+  display: flex; align-items: center; gap: 7px; margin-bottom: 22px;
+}
+.nav-logo-ic {
+  width: 22px; height: 22px; background: #18181b; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.nav-link {
+  padding: 7px 10px; border-radius: 6px; font-size: 12px; color: #52525b;
+  margin-bottom: 2px; cursor: pointer;
+}
+.nav-link.active { background: #18181b; color: #e4e4e7; }
+.nav-sec { font-size: 10px; color: #3f3f46; text-transform: uppercase;
+  letter-spacing: .07em; margin: 14px 0 5px 10px; }
+
+/* ── Content ── */
+.content { flex: 1; padding: 28px 36px; }
+.page-title { font-size: 18px; font-weight: 700; color: #f4f4f5; margin-bottom: 4px; letter-spacing: -.02em; }
+.page-sub { font-size: 12px; color: #52525b; margin-bottom: 22px; }
+
+/* Token row card */
+.token-table { width: 100%; border-collapse: collapse; }
+.token-table th {
+  text-align: left; padding: 8px 12px; font-size: 11px; font-weight: 600;
+  color: #52525b; text-transform: uppercase; letter-spacing: .06em;
+  border-bottom: 1px solid #1a1a1e;
+}
+.token-table td { padding: 13px 12px; border-bottom: 1px solid #141417; font-size: 13px; }
+.token-table tr:hover td { background: rgba(255,255,255,.02); }
+
+.sym { font-weight: 700; color: #f4f4f5; }
+.addr-cell { font-family: 'SF Mono', monospace; font-size: 11px; color: #52525b; }
+.price { color: #e4e4e7; }
+.chg-up { color: #10B981; }
+.chg-dn { color: #EF4444; }
+.liq { color: #71717a; }
+.net-tag {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 600;
+}
+.net-eth { background: rgba(99,102,241,.12); color: #818cf8; }
+.net-bsc { background: rgba(234,179,8,.1); color: #ca8a04; }
+.net-sol { background: rgba(124,58,237,.12); color: #a78bfa; }
+
+/* ── TrustScan badges — exact copy from content.js styles ── */
+.ts-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-left: 6px; padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  cursor: pointer; vertical-align: middle; white-space: nowrap;
+  border: 1px solid transparent; position: relative;
+}
+.ts-safe    { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.35); color:#10B981; }
+.ts-caution { background:rgba(245,158,11,.15);  border-color:rgba(245,158,11,.35);  color:#F59E0B; }
+.ts-danger  { background:rgba(239,68,68,.15);   border-color:rgba(239,68,68,.35);   color:#EF4444; }
+
+/* ── Tooltip — exact from content.js ── */
+.ts-tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #131316; border: 1px solid rgba(255,255,255,.1); border-radius: 10px;
+  padding: 10px 14px; min-width: 190px; font-size: 12px; color: #f4f4f5;
+  line-height: 1.6; z-index: 99999; box-shadow: 0 12px 32px rgba(0,0,0,.7);
+  white-space: nowrap; pointer-events: none;
+}
+.ts-tooltip::after {
+  content:''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: rgba(255,255,255,.1);
+}
+.tip-title { font-weight: 700; color: #fff; display: block; margin-bottom: 4px; }
+.tip-warn { color: #EF4444; }
+.tip-foot { color: #52525b; font-size: 10px; }
+
+/* ── Right panel ── */
+.rpanel {
+  width: 240px; border-left: 1px solid #1a1a1e; padding: 24px 16px;
+  background: #0b0b0e; flex-shrink: 0;
+}
+.rp-title { font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .07em; color: #52525b; margin-bottom: 14px; }
+.rp-alert {
+  background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25);
+  border-radius: 10px; padding: 12px; margin-bottom: 14px;
+}
+.rp-alert-icon { font-size: 20px; margin-bottom: 6px; }
+.rp-alert-head { font-size: 12px; font-weight: 700; color: #EF4444; margin-bottom: 4px; }
+.rp-alert-body { font-size: 11px; color: #71717a; line-height: 1.5; }
+.rp-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid #141417; font-size: 12px;
+}
+.rp-label { color: #52525b; }
+.rp-val { color: #f4f4f5; font-weight: 500; }
+.rp-val.red { color: #EF4444; }
+.rp-val.green { color: #10B981; }
+</style>
+</head>
+<body>
+
+<!-- Browser chrome -->
+<div class="bc">
+  <div class="dots"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div></div>
+  <div class="urlbar"><span class="lock">🔒</span>dexscreener.com/ethereum/new-pairs</div>
+  <div class="ext-icon">🛡</div>
+</div>
+
+<div class="page">
+  <!-- Nav -->
+  <div class="nav">
+    <div class="nav-logo"><div class="nav-logo-ic">📊</div>DexScreener</div>
+    <div class="nav-sec">Discover</div>
+    <div class="nav-link">Trending</div>
+    <div class="nav-link active">New Pairs</div>
+    <div class="nav-link">Gainers</div>
+    <div class="nav-sec">Networks</div>
+    <div class="nav-link">Ethereum</div>
+    <div class="nav-link">Solana</div>
+    <div class="nav-link">BSC</div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="page-title">New Pairs — Ethereum</div>
+    <div class="page-sub">Last updated 3 seconds ago · 1,204 pairs · Showing newest first</div>
+
+    <table class="token-table">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th>Address</th>
+          <th>Price</th>
+          <th>24h</th>
+          <th>Liquidity</th>
+          <th>Network</th>
+          <th style="text-align:center">TrustScan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="sym">USDC</span></td>
+          <td class="addr-cell">0xa0b869…06eb48</td>
+          <td class="price">$1.00</td>
+          <td class="chg-up">+0.01%</td>
+          <td class="liq">$2.1B</td>
+          <td><span class="net-tag net-eth">ETH</span></td>
+          <td style="text-align:center">
+            <span class="ts-badge ts-safe">🛡 ✓ 81</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="sym">BONK</span></td>
+          <td class="addr-cell">DezXAZ…B263</td>
+          <td class="price">$0.0000232</td>
+          <td class="chg-up">+18.4%</td>
+          <td class="liq">$42.1M</td>
+          <td><span class="net-tag net-sol">SOL</span></td>
+          <td style="text-align:center">
+            <span class="ts-badge ts-safe">🛡 ✓ 76</span>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="sym">WOJAK</span></td>
+          <td class="addr-cell">0x5026f0…c9aA</td>
+          <td class="price">$0.000841</td>
+          <td class="chg-up">+12.3%</td>
+          <td class="liq">$318k</td>
+          <td><span class="net-tag net-eth">ETH</span></td>
+          <td style="text-align:center">
+            <span class="ts-badge ts-caution">🛡 ⚠ 54</span>
+          </td>
+        </tr>
+
+        <!-- SCAM TOKEN — main hero row -->
+        <tr style="background:rgba(239,68,68,.04)">
+          <td><span class="sym">SAFEMOON2</span></td>
+          <td class="addr-cell">0xb8c77…95f9E</td>
+          <td class="price">$0.0000091</td>
+          <td class="chg-up" style="color:#EF4444">−3.1%</td>
+          <td class="liq" style="color:#EF4444">$4.2k</td>
+          <td><span class="net-tag net-bsc">BSC</span></td>
+          <td style="text-align:center; position:relative;">
+            <span class="ts-badge ts-danger" style="position:relative;">
+              🛡 ✕ 8
+              <span class="ts-tooltip">
+                <span class="tip-title">🛡 TrustScan</span>
+                SAFEMOON2 · BSC<br>
+                Score: <strong style="color:#EF4444">8 / 100</strong><br>
+                <span class="tip-warn">⚠ Honeypot — sell disabled<br>
+                ⚠ Owner not renounced<br>
+                ⚠ Liquidity unlocked</span><br>
+                <span class="tip-foot">Click to view full analysis</span>
+              </span>
+            </span>
+          </td>
+        </tr>
+
+        <tr>
+          <td><span class="sym">PEPE</span></td>
+          <td class="addr-cell">0x69825…11933</td>
+          <td class="price">$0.0000142</td>
+          <td class="chg-up">+5.7%</td>
+          <td class="liq">$28.4M</td>
+          <td><span class="net-tag net-eth">ETH</span></td>
+          <td style="text-align:center">
+            <span class="ts-badge ts-safe">🛡 ✓ 79</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Right panel -->
+  <div class="rpanel">
+    <div class="rp-title">🛡 TrustScan Alert</div>
+    <div class="rp-alert">
+      <div class="rp-alert-icon">🚨</div>
+      <div class="rp-alert-head">HIGH RISK DETECTED</div>
+      <div class="rp-alert-body">SAFEMOON2 flagged as honeypot. Selling is disabled by contract code.</div>
+    </div>
+    <div class="rp-title" style="margin-top:8px">Token Details</div>
+    <div class="rp-row"><span class="rp-label">Trust Score</span><span class="rp-val red">8 / 100</span></div>
+    <div class="rp-row"><span class="rp-label">Honeypot</span><span class="rp-val red">Detected</span></div>
+    <div class="rp-row"><span class="rp-label">Owner</span><span class="rp-val red">Active</span></div>
+    <div class="rp-row"><span class="rp-label">Liquidity</span><span class="rp-val red">Unlocked</span></div>
+    <div class="rp-row"><span class="rp-label">Verified</span><span class="rp-val red">No</span></div>
+    <div class="rp-row"><span class="rp-label">Network</span><span class="rp-val">BSC</span></div>
+  </div>
+</div>
+
+</body>
+</html>
