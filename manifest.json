@@ -42,7 +42,8 @@
   ],
 
   "host_permissions": [
-    "https://trustscan.app/*"
+    "https://trustscan.app/*",
+    "https://trustscanaaa-backend.onrender.com/*"
   ],
 
   "content_security_policy": {

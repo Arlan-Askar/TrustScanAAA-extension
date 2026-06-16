@@ -4,7 +4,8 @@
 // 2. Кэш результатов в chrome.storage.local (TTL 10 минут)
 // 3. Обновление иконки badge при активной вкладке
 
-const API_BASE = "http://localhost:8080";
+const API_BASE = "https://trustscanaaa-backend.onrender.com"; // prod
+// const API_BASE = "http://localhost:8080";                  // dev — раскомментировать для локалки
 const CACHE_TTL  = 10 * 60 * 1000; // 10 минут в мс
 
 // ─── Получить скор токена (с кэшем) ──────────────────────────
