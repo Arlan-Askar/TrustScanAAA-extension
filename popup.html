@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustScan</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 320px;
+    background: #09090b;
+    color: #f4f4f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 0 0 16px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: #0d0d10;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-shield { font-size: 20px; }
+  .logo-text {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    color: #f4f4f5;
+  }
+  .logo-text span { color: #6366F1; }
+  .open-btn {
+    font-size: 11px;
+    color: #6366F1;
+    background: rgba(99,102,241,0.12);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-weight: 700;
+    transition: background 0.15s;
+  }
+  .open-btn:hover { background: rgba(99,102,241,0.22); }
+
+  /* ── Input ── */
+  .input-wrap {
+    padding: 14px 16px 0;
+  }
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+  input {
+    flex: 1;
+    background: #18181b;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 9px 12px;
+    color: #f4f4f5;
+    font-size: 12px;
+    font-family: 'SF Mono', 'JetBrains Mono', monospace;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: rgba(99,102,241,0.5); }
+  input::placeholder { color: #52525b; }
+
+  .scan-btn {
+    background: #6366F1;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  .scan-btn:hover:not(:disabled) { background: #4f46e5; }
+  .scan-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* ── Result ── */
+  .result {
+    margin: 12px 16px 0;
+    background: #131316;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    overflow: hidden;
+    display: none;
+  }
+  .result.visible { display: block; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .result-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f4f4f5;
+  }
+  .result-network {
+    font-size: 10px;
+    color: #52525b;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .result-body {
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .score-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .score-num {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .score-denom {
+    font-size: 9px;
+    color: #52525b;
+  }
+
+  .result-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .risk-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 800;
+    border: 1px solid;
+    letter-spacing: 0.5px;
+    align-self: flex-start;
+  }
+  .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #71717a;
+  }
+  .detail-row .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .result-actions {
+    padding: 0 14px 14px;
+    display: flex;
+    gap: 8px;
+  }
+  .action-btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: inherit;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: #f4f4f5;
+    text-align: center;
+  }
+  .action-btn.primary {
+    background: #6366F1;
+    border-color: #6366F1;
+    color: #fff;
+  }
+  .action-btn.primary:hover { background: #4f46e5; }
+  .action-btn:hover:not(.primary) { background: rgba(255,255,255,0.08); }
+
+  /* ── Error / loading ── */
+  .status-msg {
+    margin: 12px 16px 0;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #71717a;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+    display: none;
+  }
+  .status-msg.visible { display: block; }
+  .status-msg.error { color: #EF4444; border-color: rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); }
+  .status-msg.rate-limit { color: #F59E0B; border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.05); }
+
+  /* ── Recent ── */
+  .section-title {
+    padding: 14px 16px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #52525b;
+  }
+  .recent-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .recent-item:hover { background: rgba(255,255,255,0.03); }
+  .recent-addr {
+    flex: 1;
+    font-size: 11px;
+    color: #71717a;
+    font-family: 'SF Mono', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .recent-score {
+    font-size: 13px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 14px;
+    padding: 0 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .footer-text {
+    font-size: 10px;
+    color: #3f3f46;
+  }
+  .footer-link {
+    font-size: 10px;
+    color: #52525b;
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+  .footer-link:hover { color: #71717a; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(99,102,241,0.3);
+    border-top-color: #6366F1;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <span class="logo-shield">🛡</span>
+    <span class="logo-text">Trust<span>Scan</span></span>
+  </div>
+  <button class="open-btn" id="openApp">Open App ↗</button>
+</div>
+
+<!-- INPUT -->
+<div class="input-wrap">
+  <div class="input-row">
+    <input
+      type="text"
+      id="addrInput"
+      placeholder="0x… token address"
+      spellcheck="false"
+      autocomplete="off"
+    />
+    <button class="scan-btn" id="scanBtn">Scan</button>
+  </div>
+</div>
+
+<!-- STATUS / LOADING -->
+<div class="status-msg" id="statusMsg"></div>
+
+<!-- RESULT CARD -->
+<div class="result" id="resultCard">
+  <div class="result-header">
+    <div>
+      <div class="result-name" id="resName">—</div>
+      <div class="result-network" id="resNetwork">—</div>
+    </div>
+    <div id="resBadge" class="risk-badge"></div>
+  </div>
+  <div class="result-body">
+    <div class="score-circle" id="resCircle">
+      <div class="score-num" id="resScore">—</div>
+      <div class="score-denom">/100</div>
+    </div>
+    <div class="result-details" id="resDetails"></div>
+  </div>
+  <div class="result-actions">
+    <button class="action-btn primary" id="resFullBtn">Full Analysis ↗</button>
+    <button class="action-btn" id="resCopyBtn">Copy Link</button>
+  </div>
+</div>
+
+<!-- RECENT SCANS -->
+<div id="recentSection">
+  <div class="section-title">RECENT SCANS</div>
+  <div id="recentList"></div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span class="footer-text">TrustScan v1.0 · trustscan.app</span>
+  <button class="footer-link" id="clearCacheBtn">Clear cache</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>
