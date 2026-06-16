@@ -6,7 +6,8 @@
 
 const API_BASE = "https://trustscanaaa-backend.onrender.com"; // prod
 // const API_BASE = "http://localhost:8080";                  // dev — раскомментировать для локалки
-const CACHE_TTL  = 10 * 60 * 1000; // 10 минут в мс
+const CACHE_TTL       = 10 * 60 * 1000; // 10 минут в мс
+const CACHE_INDEX_KEY = "ts_cache_index"; // индекс всех ts_score_* ключей → timestamp
 
 // ─── Получить скор токена (с кэшем) ──────────────────────────
 async function getTokenScore(address, network = "auto") {
@@ -48,10 +49,18 @@ async function getTokenScore(address, network = "auto") {
       address:   address.toLowerCase(),
     };
 
+    const now = Date.now();
+
     // Сохраняем в кэш
     await chrome.storage.local.set({
-      [cacheKey]: { data: result, ts: Date.now() },
+      [cacheKey]: { data: result, ts: now },
     });
+
+    // Обновляем индекс
+    const idxStore = await chrome.storage.local.get(CACHE_INDEX_KEY);
+    const idx = idxStore[CACHE_INDEX_KEY] ?? {};
+    idx[cacheKey] = now;
+    await chrome.storage.local.set({ [CACHE_INDEX_KEY]: idx });
 
     // Чистим старые записи если их больше 200
     cleanOldCache();
@@ -65,17 +74,20 @@ async function getTokenScore(address, network = "auto") {
 
 // ─── Чистка старого кэша ─────────────────────────────────────
 async function cleanOldCache() {
-  const all = await chrome.storage.local.get(null);
-  const keys = Object.keys(all).filter(k => k.startsWith("ts_score_"));
+  const idxStore = await chrome.storage.local.get(CACHE_INDEX_KEY);
+  const idx = idxStore[CACHE_INDEX_KEY] ?? {};
+  const keys = Object.keys(idx);
   if (keys.length <= 200) return;
 
   // Удаляем самые старые
   const sorted = keys
-    .map(k => ({ key: k, ts: all[k]?.ts ?? 0 }))
+    .map(k => ({ key: k, ts: idx[k] ?? 0 }))
     .sort((a, b) => a.ts - b.ts);
 
   const toDelete = sorted.slice(0, sorted.length - 150).map(e => e.key);
   await chrome.storage.local.remove(toDelete);
+  toDelete.forEach(k => delete idx[k]);
+  await chrome.storage.local.set({ [CACHE_INDEX_KEY]: idx });
 }
 
 // ─── Message handler от content script / popup ───────────────
@@ -88,9 +100,13 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === "CLEAR_CACHE") {
-    chrome.storage.local.get(null).then(all => {
-      const keys = Object.keys(all).filter(k => k.startsWith("ts_score_"));
-      chrome.storage.local.remove(keys).then(() => sendResponse({ ok: true }));
+    chrome.storage.local.get(CACHE_INDEX_KEY).then(idxStore => {
+      const idx = idxStore[CACHE_INDEX_KEY] ?? {};
+      const keys = Object.keys(idx);
+      Promise.all([
+        chrome.storage.local.remove(keys),
+        chrome.storage.local.remove(CACHE_INDEX_KEY),
+      ]).then(() => sendResponse({ ok: true }));
     });
     return true;
   }

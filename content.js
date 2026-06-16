@@ -216,35 +216,38 @@
     let match;
 
     EVM_RE.lastIndex = 0;
-    while ((match = EVM_RE.exec(text)) !== null) {
-      if (scanCount >= MAX_PER_PAGE) break;
+    try {
+      while ((match = EVM_RE.exec(text)) !== null) {
+        if (scanCount >= MAX_PER_PAGE) break;
 
-      const addr = match[1].toLowerCase();
+        const addr = match[1].toLowerCase();
 
-      // Уже добавляли badge для этого адреса
-      if (processedAddresses.has(addr)) continue;
+        // Уже добавляли badge для этого адреса
+        if (processedAddresses.has(addr)) continue;
 
-      // Текст до адреса
-      if (match.index > lastIdx) {
-        parts.push(document.createTextNode(text.slice(lastIdx, match.index)));
+        // Текст до адреса
+        if (match.index > lastIdx) {
+          parts.push(document.createTextNode(text.slice(lastIdx, match.index)));
+        }
+
+        // Сам адрес как текст (не меняем)
+        parts.push(document.createTextNode(match[1]));
+
+        // Badge после адреса
+        const badge = createBadge(addr);
+        parts.push(badge);
+
+        processedAddresses.set(addr, badge);
+        scanCount++;
+
+        // Запрос с небольшой задержкой чтобы не флудить
+        setTimeout(() => fetchAndUpdate(addr, badge), scanCount * 120);
+
+        lastIdx = match.index + match[0].length;
       }
-
-      // Сам адрес как текст (не меняем)
-      parts.push(document.createTextNode(match[1]));
-
-      // Badge после адреса
-      const badge = createBadge(addr);
-      parts.push(badge);
-
-      processedAddresses.set(addr, badge);
-      scanCount++;
-
-      // Запрос с небольшой задержкой чтобы не флудить
-      setTimeout(() => fetchAndUpdate(addr, badge), scanCount * 120);
-
-      lastIdx = match.index + match[0].length;
+    } finally {
+      EVM_RE.lastIndex = 0;
     }
-    EVM_RE.lastIndex = 0;
 
     if (parts.length === 0) return;
 
