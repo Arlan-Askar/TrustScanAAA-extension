@@ -12,6 +12,8 @@
 
   // ─── Константы ───────────────────────────────────────────────
   const EVM_RE       = /\b(0x[0-9a-fA-F]{40})\b/g;
+  // Solana: base58, 43–44 символа (точная длина публичного ключа 32 байта)
+  const SOL_RE       = /\b([1-9A-HJ-NP-Za-km-z]{43,44})\b/g;
   const PROCESSED    = "data-ts-done";          // маркер обработанного элемента
   const BADGE_CLASS  = "ts-badge";
   const MAX_PER_PAGE = 30;                      // не сканируем больше N адресов на странице
@@ -117,7 +119,7 @@
   }
 
   // ─── Создаём badge DOM-элемент ────────────────────────────────
-  function createBadge(address) {
+  function createBadge(address, network = "ethereum") {
     const badge = document.createElement("span");
     badge.className = `${BADGE_CLASS} ts-badge-loading`;
     badge.setAttribute("data-address", address);
@@ -131,7 +133,7 @@
       chrome.runtime.sendMessage({
         type:    "OPEN_APP",
         address: address,
-        network: "ethereum",
+        network: network,
       });
     });
 
@@ -167,7 +169,7 @@
     tooltip.className = "ts-tooltip";
     tooltip.innerHTML = `
       <strong>🛡 TrustScan</strong><br>
-      ${name} · ${result.network || "ETH"}<br>
+      ${name} · ${(result.network || "ETH").toUpperCase()}<br>
       Score: <strong>${scoreStr}/100</strong><br>
       ${result.isHoneypot ? "⚠️ Honeypot detected<br>" : ""}
       ${result.ownerRenounced ? "✓ Owner renounced<br>" : ""}
@@ -184,12 +186,12 @@
   let scanCount = 0;
 
   // ─── Запрашиваем скор и обновляем badge ──────────────────────
-  async function fetchAndUpdate(address, badge) {
+  async function fetchAndUpdate(address, badge, network = "auto") {
     try {
       const result = await chrome.runtime.sendMessage({
         type:    "GET_SCORE",
         address: address,
-        network: "auto",
+        network: network,
       });
       updateBadge(badge, result, address);
     } catch {
@@ -197,11 +199,45 @@
     }
   }
 
+  // ─── Собираем все совпадения из текста (EVM + Solana) ────────
+  function collectMatches(text) {
+    const matches = [];
+    let m;
+
+    EVM_RE.lastIndex = 0;
+    try {
+      while ((m = EVM_RE.exec(text)) !== null) {
+        matches.push({ index: m.index, end: m.index + m[0].length, raw: m[1], addr: m[1].toLowerCase(), network: "ethereum" });
+      }
+    } finally {
+      EVM_RE.lastIndex = 0;
+    }
+
+    SOL_RE.lastIndex = 0;
+    try {
+      while ((m = SOL_RE.exec(text)) !== null) {
+        matches.push({ index: m.index, end: m.index + m[0].length, raw: m[1], addr: m[1], network: "solana" });
+      }
+    } finally {
+      SOL_RE.lastIndex = 0;
+    }
+
+    // Сортируем по позиции, убираем перекрытия (EVM-совпадение имеет приоритет как более точное)
+    matches.sort((a, b) => a.index - b.index);
+    const deduped = [];
+    let lastEnd = 0;
+    for (const hit of matches) {
+      if (hit.index >= lastEnd) {
+        deduped.push(hit);
+        lastEnd = hit.end;
+      }
+    }
+    return deduped;
+  }
+
   // ─── Обрабатываем один текстовый нод ─────────────────────────
   function processTextNode(node) {
     const text = node.textContent;
-    if (!EVM_RE.test(text)) return;
-    EVM_RE.lastIndex = 0;
 
     // Не трогаем уже обработанные
     if (node.parentElement?.hasAttribute(PROCESSED)) return;
@@ -210,43 +246,33 @@
     const parent = node.parentElement;
     if (!parent || SKIP_TAGS.has(parent.tagName)) return;
 
-    // Разбиваем текст на части: текст + адрес
-    const parts  = [];
-    let lastIdx  = 0;
-    let match;
+    const hits = collectMatches(text);
+    if (hits.length === 0) return;
 
-    EVM_RE.lastIndex = 0;
-    try {
-      while ((match = EVM_RE.exec(text)) !== null) {
-        if (scanCount >= MAX_PER_PAGE) break;
+    // Разбиваем текст на части: текст + адрес + badge
+    const parts = [];
+    let lastIdx = 0;
 
-        const addr = match[1].toLowerCase();
+    for (const hit of hits) {
+      if (scanCount >= MAX_PER_PAGE) break;
+      if (processedAddresses.has(hit.addr)) continue;
 
-        // Уже добавляли badge для этого адреса
-        if (processedAddresses.has(addr)) continue;
-
-        // Текст до адреса
-        if (match.index > lastIdx) {
-          parts.push(document.createTextNode(text.slice(lastIdx, match.index)));
-        }
-
-        // Сам адрес как текст (не меняем)
-        parts.push(document.createTextNode(match[1]));
-
-        // Badge после адреса
-        const badge = createBadge(addr);
-        parts.push(badge);
-
-        processedAddresses.set(addr, badge);
-        scanCount++;
-
-        // Запрос с небольшой задержкой чтобы не флудить
-        setTimeout(() => fetchAndUpdate(addr, badge), scanCount * 120);
-
-        lastIdx = match.index + match[0].length;
+      if (hit.index > lastIdx) {
+        parts.push(document.createTextNode(text.slice(lastIdx, hit.index)));
       }
-    } finally {
-      EVM_RE.lastIndex = 0;
+
+      parts.push(document.createTextNode(hit.raw));
+
+      const badge = createBadge(hit.addr, hit.network);
+      parts.push(badge);
+
+      processedAddresses.set(hit.addr, badge);
+      scanCount++;
+
+      // Запрос с небольшой задержкой чтобы не флудить
+      setTimeout(() => fetchAndUpdate(hit.addr, badge, hit.network), scanCount * 120);
+
+      lastIdx = hit.end;
     }
 
     if (parts.length === 0) return;
@@ -275,7 +301,9 @@
           if (SKIP_TAGS.has(node.parentElement?.tagName)) return NodeFilter.FILTER_REJECT;
           if (node.parentElement?.hasAttribute(PROCESSED))    return NodeFilter.FILTER_REJECT;
           if (node.parentElement?.classList.contains(BADGE_CLASS)) return NodeFilter.FILTER_REJECT;
-          if (!node.textContent.includes("0x"))               return NodeFilter.FILTER_REJECT;
+          // Быстрый pre-filter: нода должна содержать "0x" (EVM) или быть достаточно длинной (Solana 43+)
+          const t = node.textContent;
+          if (!t.includes("0x") && t.length < 43)            return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
         },
       }
