@@ -1,12 +1,18 @@
 // TrustScan Extension — Popup Script
 
-const EVM_RE = /^0x[0-9a-fA-F]{40}$/;
+const EVM_RE    = /^0x[0-9a-fA-F]{40}$/;
+const SOL_RE    = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;
+const DOMAIN_RE = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
 const RECENT_KEY = "ts_recent_scans";
 const MAX_RECENT = 5;
 
-// ─── Цвета по скору ──────────────────────────────────────────
+function isBrokerDomain(val) {
+  return DOMAIN_RE.test(val) && !EVM_RE.test(val) && !SOL_RE.test(val);
+}
+
+// ─── Цвета по скору (крипта) ─────────────────────────────────
 function scoreColor(s) {
-  if (s === null || s === undefined) return "#52525b";
+  if (s === null || s === undefined || s < 0) return "#52525b";
   if (s >= 70) return "#10B981";
   if (s >= 45) return "#F59E0B";
   return "#EF4444";
@@ -16,6 +22,32 @@ function riskLabel(s) {
   if (s >= 70) return "SAFE";
   if (s >= 45) return "CAUTION";
   return "HIGH RISK";
+}
+
+// ─── Цвета/лейблы для брокерских вердиктов ──────────────────
+function brokerColor(riskLevel) {
+  switch (riskLevel) {
+    case "LOW":           return "#10B981";
+    case "MEDIUM":        return "#F59E0B";
+    case "HIGH":          return "#EF4444";
+    case "BLACKLISTED":   return "#EF4444";
+    default:              return "#52525b"; // INSUFFICIENT_DATA
+  }
+}
+function brokerLabel(riskLevel) {
+  switch (riskLevel) {
+    case "LOW":           return "LOW RISK";
+    case "MEDIUM":        return "MEDIUM";
+    case "HIGH":          return "HIGH RISK";
+    case "BLACKLISTED":   return "BLACKLISTED";
+    default:              return "NO DATA";
+  }
+}
+function signalColor(val) {
+  if (val < 0)  return "#52525b";
+  if (val >= 70) return "#10B981";
+  if (val >= 45) return "#F59E0B";
+  return "#EF4444";
 }
 
 // ─── DOM refs ────────────────────────────────────────────────
@@ -103,35 +135,103 @@ function renderResult(result, address) {
   saveRecent({ address, score: s, symbol: result.symbol || "", network: result.network || "ethereum" });
 }
 
+// ─── Рендер брокер-результата ────────────────────────────────
+function renderBrokerResult(result, domain) {
+  hideStatus();
+
+  const rl    = result.riskLevel || "INSUFFICIENT_DATA";
+  const col   = brokerColor(rl);
+  const label = brokerLabel(rl);
+  const score = (result.score >= 0) ? result.score : null;
+
+  resName.textContent    = domain;
+  resNetwork.textContent = "🏦 BROKER";
+
+  resBadge.textContent        = label;
+  resBadge.style.color        = col;
+  resBadge.style.borderColor  = col + "55";
+  resBadge.style.background   = col + "18";
+
+  resCircle.style.borderColor = col;
+  resScore.textContent        = score !== null ? score : "?";
+  resScore.style.color        = col;
+
+  // Три сигнала
+  const sig = result.signals || { license: -1, domain: -1, transparency: -1 };
+  const sigRows = [
+    { name: "License",      val: sig.license },
+    { name: "Domain",       val: sig.domain },
+    { name: "Transparency", val: sig.transparency },
+  ].map(({ name, val }) => {
+    const c    = signalColor(val);
+    const text = val >= 0 ? `${val}/100` : "No data";
+    return `<div class="detail-row">
+      <span class="dot" style="background:${c}"></span>
+      <span style="color:#a1a1aa">${name}:</span>
+      <span style="color:${c};font-weight:700">${text}</span>
+    </div>`;
+  }).join("");
+  resDetails.innerHTML = sigRows;
+
+  const appUrl = `https://trust-scan-aaa-frontend.vercel.app/?address=${encodeURIComponent(domain)}&network=broker`;
+  resFullBtn.onclick = () => chrome.runtime.sendMessage({ type: "OPEN_APP", address: domain, network: "broker" });
+  resCopyBtn.onclick = () => {
+    navigator.clipboard.writeText(appUrl);
+    resCopyBtn.textContent = "Copied!";
+    setTimeout(() => { resCopyBtn.textContent = "Copy Link"; }, 1500);
+  };
+
+  resultCard.classList.add("visible");
+  saveRecent({ address: domain, score: score, symbol: "🏦", network: "broker" });
+}
+
 // ─── Основной скан ───────────────────────────────────────────
-async function doScan(address) {
-  address = address.trim().toLowerCase();
-  if (!EVM_RE.test(address)) {
-    showStatus("⚠ Enter a valid EVM address (0x…)", "error");
+async function doScan(raw) {
+  const address = raw.trim();
+  const broker  = isBrokerDomain(address);
+  const evm     = EVM_RE.test(address.toLowerCase());
+  const sol     = SOL_RE.test(address);
+
+  if (!broker && !evm && !sol) {
+    showStatus("⚠ Enter a token address (0x…) or broker domain (e.g. binance.com)", "error");
     return;
   }
 
-  scanBtn.disabled    = true;
-  addrInput.disabled  = true;
+  scanBtn.disabled   = true;
+  addrInput.disabled = true;
   showStatus('<span class="spinner"></span>Scanning…');
 
   try {
-    const result = await chrome.runtime.sendMessage({
-      type:    "GET_SCORE",
-      address: address,
-      network: "auto",
-    });
-
-    if (result.error === "rate_limit") {
-      showStatus("⏳ Daily limit reached. <a href='https://t.me/TrustScan_AAA_bot?start=premium' target='_blank' style='color:#F59E0B'>Get Premium →</a>", "rate-limit");
-      return;
+    if (broker) {
+      const result = await chrome.runtime.sendMessage({
+        type:   "GET_BROKER_SCORE",
+        domain: address.toLowerCase(),
+      });
+      if (result.error === "rate_limit") {
+        showStatus("⏳ Daily limit reached.", "rate-limit");
+        return;
+      }
+      if (result.error) {
+        showStatus("❌ Could not reach TrustScan. Check connection.", "error");
+        return;
+      }
+      renderBrokerResult(result, address.toLowerCase());
+    } else {
+      const result = await chrome.runtime.sendMessage({
+        type:    "GET_SCORE",
+        address: address.toLowerCase(),
+        network: "auto",
+      });
+      if (result.error === "rate_limit") {
+        showStatus("⏳ Daily limit reached. <a href='https://t.me/TrustScan_AAA_bot?start=premium' target='_blank' style='color:#F59E0B'>Get Premium →</a>", "rate-limit");
+        return;
+      }
+      if (result.error) {
+        showStatus("❌ Could not reach TrustScan. Check connection.", "error");
+        return;
+      }
+      renderResult(result, address.toLowerCase());
     }
-    if (result.error) {
-      showStatus("❌ Could not reach TrustScan. Check connection.", "error");
-      return;
-    }
-
-    renderResult(result, address);
   } catch {
     showStatus("❌ Extension error. Try again.", "error");
   } finally {
@@ -199,7 +299,7 @@ async function tryPasteFromSelection() {
       target: { tabId: tab.id },
       func:   () => window.getSelection()?.toString().trim() || "",
     });
-    if (result && /^0x[0-9a-fA-F]{40}$/.test(result)) {
+    if (result && (EVM_RE.test(result) || SOL_RE.test(result) || isBrokerDomain(result))) {
       addrInput.value = result;
     }
   } catch { /* нет доступа к вкладке — игнорируем */ }

@@ -90,13 +90,69 @@ async function cleanOldCache() {
   await chrome.storage.local.set({ [CACHE_INDEX_KEY]: idx });
 }
 
+// ─── Получить скор брокера/домена (с кэшем) ─────────────────
+async function getBrokerScore(domain) {
+  const cacheKey = `ts_score_broker_${domain.toLowerCase()}`;
+
+  const cached = await chrome.storage.local.get(cacheKey);
+  if (cached[cacheKey]) {
+    const entry = cached[cacheKey];
+    if (Date.now() - entry.ts < CACHE_TTL) return entry.data;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/analyze`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ address: domain, network: "broker", lang: "en", source: "extension" }),
+      signal:  AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) return { error: "rate_limit" };
+      return { error: "api_error", status: res.status };
+    }
+
+    const data = await res.json();
+    const result = {
+      type:      "broker",
+      score:     data.score      ?? -1,
+      riskLevel: data.risk_level ?? "INSUFFICIENT_DATA",
+      domain:    domain.toLowerCase(),
+      signals:   data.broker_signals ?? { license: -1, domain: -1, transparency: -1 },
+      risks:     data.risks ?? [],
+    };
+
+    const now = Date.now();
+    await chrome.storage.local.set({ [cacheKey]: { data: result, ts: now } });
+
+    const idxStore = await chrome.storage.local.get(CACHE_INDEX_KEY);
+    const idx = idxStore[CACHE_INDEX_KEY] ?? {};
+    idx[cacheKey] = now;
+    await chrome.storage.local.set({ [CACHE_INDEX_KEY]: idx });
+    cleanOldCache();
+
+    return result;
+  } catch (err) {
+    if (err.name === "TimeoutError") return { error: "timeout" };
+    return { error: "network_error" };
+  }
+}
+
 // ─── Message handler от content script / popup ───────────────
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "GET_SCORE") {
     getTokenScore(msg.address, msg.network || "auto")
       .then(sendResponse)
       .catch(err => sendResponse({ error: String(err) }));
-    return true; // async response
+    return true;
+  }
+
+  if (msg.type === "GET_BROKER_SCORE") {
+    getBrokerScore(msg.domain)
+      .then(sendResponse)
+      .catch(err => sendResponse({ error: String(err) }));
+    return true;
   }
 
   if (msg.type === "CLEAR_CACHE") {
@@ -112,9 +168,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 
   if (msg.type === "OPEN_APP") {
-    const url = msg.address
-      ? `https://trust-scan-aaa-frontend.vercel.app/?address=${msg.address}&network=${msg.network || "ethereum"}`
-      : "https://trust-scan-aaa-frontend.vercel.app/";
+    let url = "https://trust-scan-aaa-frontend.vercel.app/";
+    if (msg.address) {
+      const net = msg.network || "ethereum";
+      url = `https://trust-scan-aaa-frontend.vercel.app/?address=${encodeURIComponent(msg.address)}&network=${net}`;
+    }
     chrome.tabs.create({ url });
     sendResponse({ ok: true });
     return false;
